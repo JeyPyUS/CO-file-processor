@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 import os
 
 CONFIG_PATH = 'src/config.ini'
-DATE_FORMAT = '%d/%m/%Y %H:%M'
+DATE_FORMAT_L = '%d/%m/%Y %H:%M'
+DATE_FORMAT_S = '%d/%m/%Y'
 
 
 def get_config(file_path):
@@ -47,6 +48,21 @@ def df_to_csv(df, file_name):
     print(f'El archivo {file_name.split('\\')[-1]} se ha creado exitosamente.')
 
 
+def date_format_update(df, col_num, info):
+    '''
+    This function updates date format depending of the columns in Excel
+    '''
+    if str(col_num) in info:
+        dt_format = DATE_FORMAT_S
+    elif str(col_num) in info:
+        dt_format = DATE_FORMAT_L
+    
+    df['aux'] = df.iloc[:, col_num].dt.strftime(dt_format)
+    df.iloc[:, col_num] = df.iloc[:, col_num].apply(lambda x: None)
+    df.iloc[:, col_num] = df['aux']
+    df.drop('aux', axis=1, inplace=True)
+
+
 def main():
     '''
     Main process
@@ -77,42 +93,32 @@ def main():
     # Set 'Dissenbarking port LOCODE' column to 'ZZZZZ' when empty
     df_crew_list.iloc[:, zzzz_col] = df_crew_list.iloc[:, zzzz_col].fillna('ZZZZZ')
 
+    print('--------Fechas como se reciben:')
+    for i in range(len(df_crew_list.iloc[:, join_col])):
+        d1 = df_crew_list.iloc[i, join_col]
+        d2 = df_crew_list.iloc[i, dbkg_col]
+        print(f'{d1.strftime("%Y")}-{d1.strftime("%m")}-{d1.strftime("%d")} -> {d2}')
 
     # Fill date column adding 215 days
-    df_crew_list.iloc[:, dbkg_col] = pd.to_datetime(df_crew_list.iloc[:, dbkg_col], format='%Y-%d-%m %H:%M', errors='coerce')
-    df_crew_list.iloc[:, join_col] = pd.to_datetime(df_crew_list.iloc[:, join_col], format='%Y-%d-%m %H:%M', errors='coerce')
-    # df_crew_list.iloc[:, exp_col] = pd.to_datetime(df_crew_list.iloc[:, exp_col], format='%Y-%m-%d', errors='coerce')
-    # df_crew_list.iloc[:, brd_col] = pd.to_datetime(df_crew_list.iloc[:, brd_col], format='%Y-%m-%d', errors='coerce')
-    print('--------Fechas como se reciben:')
-    print(df_crew_list.iloc[3, join_col])
-    print(type(df_crew_list.iloc[3, join_col]))
-    print(df_crew_list.iloc[3, dbkg_col])
-    print(type(df_crew_list.iloc[3, dbkg_col]))
-
-    
-    # print(df_crew_list.iloc[:, [join_col, dbkg_col]])
-
     df_crew_list.iloc[:, dbkg_col] = df_crew_list.iloc[:, dbkg_col].fillna(df_crew_list.iloc[:,join_col] + pd.Timedelta(1, unit='days'))
 
-    # print(df_crew_list.iloc[:, [join_col, dbkg_col]])
     print('--------Fechas tras hacer la suma:')
-    print(df_crew_list.iloc[3, join_col])
-    print(type(df_crew_list.iloc[3, join_col]))
-    print(df_crew_list.iloc[3, dbkg_col])
-    print(type(df_crew_list.iloc[3, dbkg_col]))
+    for i in range(len(df_crew_list.iloc[:, join_col])):
+        d1 = df_crew_list.iloc[i, join_col]
+        d2 = df_crew_list.iloc[i, dbkg_col]
+        print(f'{d1.strftime("%Y")}-{d1.strftime("%m")}-{d1.strftime("%d")} -> {d2.strftime("%Y")}-{d2.strftime("%m")}-{d2.strftime("%d")}')
 
+    date_format_update(df_crew_list, xlsx_config['join_date_col'], xlsx_config['long_date_cols'])
+    date_format_update(df_crew_list, xlsx_config['dissenbarkin_date_col'], xlsx_config['long_date_cols'])
+    date_format_update(df_crew_list, xlsx_config['exp_date_col'], xlsx_config['short_date_cols'])
+    date_format_update(df_crew_list, xlsx_config['birthday_date'], xlsx_config['short_date_cols'])
 
-    df_crew_list.iloc[:, dbkg_col] = df_crew_list.iloc[:, dbkg_col].dt.strftime(DATE_FORMAT)
-    df_crew_list.iloc[:, join_col] = df_crew_list.iloc[:, join_col].dt.strftime(DATE_FORMAT)
-    # df_crew_list.iloc[:, exp_col] = df_crew_list.iloc[:, exp_col].dt.strftime('%Y/%m/%d')
-    # df_crew_list.iloc[:, brd_col] = df_crew_list.iloc[:, brd_col].dt.strftime('%Y/%m/%d')
-
-    # print(df_crew_list.iloc[:, [join_col, dbkg_col]])
     print('--------Fechas al corregir formato:')
-    print(df_crew_list.iloc[3, join_col])
-    print(type(df_crew_list.iloc[3, join_col]))
-    print(df_crew_list.iloc[3, dbkg_col])
-    print(type(df_crew_list.iloc[3, dbkg_col]))
+    for i in range(len(df_crew_list.iloc[:, join_col])):
+        d1 = df_crew_list.iloc[i, join_col]
+        d2 = df_crew_list.iloc[i, dbkg_col]
+        print(f'{d1} -> {d2}')
+        print(f'{df_crew_list['aux_join_col'][i]} -> {df_crew_list['aux_dbkg_col'][i]}')
 
     df_crew_list_2 = df_crew_list[df_crew_list.iloc[:, e_s_col] == 'E & S']
 
